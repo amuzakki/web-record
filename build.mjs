@@ -9,7 +9,7 @@
 // 3. Emit the engine + its CSS as string constants for inlining into the
 //    self-contained HTML export, and as extension files for the viewer page.
 import { build } from "esbuild";
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from "node:fs";
 
 // --- single-source splicing ------------------------------------------------
 // The popup component and the colour palette each have ONE authored home
@@ -42,7 +42,8 @@ const tokensCss = "\n  " + tokenLines.join("\n  ") + "\n  ";
 const tokensJsArray = "\n    " + tokenLines.map((l) => JSON.stringify("  " + l) + ",").join("\n    ") + "\n    ";
 
 // Fan the palette out to every consumer between its token markers.
-for (const file of ["renderer.js", "viewer.html", "openjam-popup.js"]) {
+for (const file of ["renderer.js", "viewer.html", "openjam-popup.js", "options.html"]) {
+  if (!existsSync(file)) continue;
   // openjam-popup.js builds its <style> as a JS string-array, so it takes the
   // array-element rendering; the others are raw CSS.
   const body = file === "openjam-popup.js" ? tokensJsArray : tokensCss;
@@ -151,3 +152,10 @@ writeFileSync(
     "export const WAVEFORM_JS = " + JSON.stringify(waveformSrc) + ";\n",
 );
 console.log("wrote src/generated/player-assets.js, dist/rrweb-replay.{js,css}");
+
+if (existsSync("options.html")) {
+  copyFileSync("options.html", "dist/options.html");
+}
+if (existsSync("options.js")) {
+  copyFileSync("options.js", "dist/options.js");
+}

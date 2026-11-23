@@ -101,6 +101,11 @@ Injects OpenJam's rrweb replay recorder into the recorded tab (when the content 
 The MV3 service worker has no DOM and cannot run getUserMedia/MediaRecorder, so the opt-in microphone-narration feature records in an offscreen document instead. It is created only when the user has enabled "Record audio" and starts a recording, and is closed when the recording stops. The narration is embedded in the local report file; nothing is transmitted.
 ```
 
+**clipboardWrite**
+```
+Copies the generated public GitHub Pages preview link to the clipboard automatically when the user exports and uploads a report to GitHub.
+```
+
 **host permissions (`<all_urls>`)**
 ```
 Users record bugs on arbitrary websites, so OpenJam needs host access to read the page and inject the recorder on whatever tab they pick. It does nothing on any page until the user explicitly presses Start; no host is touched in the background.

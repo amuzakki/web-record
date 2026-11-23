@@ -1,0 +1,42 @@
+name: Build and Publish Reports Index
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/reports/**'
+      - 'scripts/generate-index.js'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate Reports Index
+        run: node scripts/generate-index.js
+
+      - name: Commit and push updated index.html
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if git diff --staged --quiet; then
+            echo "No changes in docs/index.html to commit."
+          else
+            git commit -m "Auto-generate reports index in docs/index.html [skip ci]"
+            git push
+          fi

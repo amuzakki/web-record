@@ -7,6 +7,7 @@
 import { renderReport, mountReplay, mountAudio, REPORT_CSS, REPLAY_CSS } from "./renderer.js";
 import { buildReportHTML } from "./report-builder.js";
 import { renderErrorReport } from "./issue-link.js";
+import { uploadReportToGitHub, getGitHubConfig } from "./src/utils/githubUploader.js";
 
 const ENV = { version: chrome.runtime.getManifest().version, userAgent: navigator.userAgent };
 const params = new URLSearchParams(location.search);
@@ -92,6 +93,97 @@ async function load() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
+
+  const settingsBtn = document.getElementById("open-settings");
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", () => {
+      if (chrome.runtime.openOptionsPage) {
+        chrome.runtime.openOptionsPage();
+      } else {
+        window.open(chrome.runtime.getURL("options.html"));
+      }
+    });
+  }
+
+  const uploadBtn = document.getElementById("upload-github");
+  const toast = document.getElementById("toast");
+
+  function showToast(message, type = "info", durationMs = 8000, link = null) {
+    if (!toast) return;
+    toast.className = `toast ${type}`;
+    toast.innerHTML = "";
+
+    const span = document.createElement("span");
+    span.textContent = message;
+    toast.appendChild(span);
+
+    if (link) {
+      const a = document.createElement("a");
+      a.href = link;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = " " + link;
+      toast.appendChild(a);
+    }
+
+    const close = document.createElement("button");
+    close.className = "close-toast";
+    close.textContent = "✕";
+    close.title = "Dismiss";
+    close.onclick = () => { toast.hidden = true; };
+    toast.appendChild(close);
+
+    toast.hidden = false;
+    if (durationMs > 0) {
+      setTimeout(() => {
+        if (toast.textContent.includes(message)) toast.hidden = true;
+      }, durationMs);
+    }
+  }
+
+  if (uploadBtn) {
+    uploadBtn.addEventListener("click", async () => {
+      const config = await getGitHubConfig();
+      if (!config || !config.pat || !config.owner || !config.repo) {
+        showToast("GitHub is not configured. Please open Settings to enter your PAT and repository.", "error", 10000);
+        if (chrome.runtime.openOptionsPage) {
+          chrome.runtime.openOptionsPage();
+        }
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      const originalText = uploadBtn.textContent;
+      uploadBtn.textContent = "⏳ Uploading...";
+      showToast(`Uploading report to ${config.owner}/${config.repo}...`, "info", 0);
+
+      try {
+        const html = buildReportHTML(report, replayAssets);
+        const prefix = (config.prefix || "openjam").trim();
+        const stamp = new Date(report.meta.capturedAt).toISOString().replace(/[:.]/g, "-");
+        const filename = `${prefix}-${stamp}.html`;
+
+        const result = await uploadReportToGitHub({
+          htmlContent: html,
+          filename,
+          config,
+        });
+
+        uploadBtn.textContent = "✓ Uploaded & Copied!";
+        showToast("Uploaded successfully! Public URL copied to clipboard:", "success", 15000, result.pagesUrl);
+
+        setTimeout(() => {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = originalText;
+        }, 4000);
+      } catch (err) {
+        console.error("GitHub upload error:", err);
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = originalText;
+        showToast(`Upload failed: ${err.message}`, "error", 12000);
+      }
+    });
+  }
 }
 
 load();

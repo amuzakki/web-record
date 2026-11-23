@@ -3,10 +3,14 @@
   "name": "OpenJam",
   "version": "0.7.2",
   "description": "Capture console, network, screenshots, mic narration and device info into one self-contained bug report. Open-source Jam.dev.",
-  "permissions": ["debugger", "storage", "unlimitedStorage", "scripting", "offscreen"],
+  "permissions": ["debugger", "storage", "unlimitedStorage", "scripting", "offscreen", "clipboardWrite"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' data: *; img-src * data: blob:; media-src * data: blob:; font-src * data:; frame-src 'self' data: blob:; child-src 'self' data: blob:; connect-src 'none'"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' data: *; img-src * data: blob:; media-src * data: blob:; font-src * data:; frame-src 'self' data: blob:; child-src 'self' data: blob:; connect-src 'self' https://api.github.com"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
   },
   "background": { "service_worker": "background.js", "type": "module" },
   "content_scripts": [

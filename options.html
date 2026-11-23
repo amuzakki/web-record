@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenJam Settings - GitHub Publisher</title>
+<style>
+  :root {
+    /* tokens:start */
+  --bg:#0f1115; --bg2:#0b0d12; --panel:#171a21; --panel2:#1d212b;
+  --line:#2a2f3a; --line-soft:#212632;
+  --fg:#e6e9ef; --muted:#8b93a3; --dim:#5b6472;
+  --accent:#6ea8fe; --accent2:#58a6ff; --blue:var(--accent2); --accent-ink:#0b0d12;
+  --green:#3fb950; --gold:#d29922; --orange:var(--gold); --terra:#d97757;
+  --red:#f85149; --violet:#bc8cff; --audio:#1d2b45;
+  /* tokens:end */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 13.5px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    padding: 32px 20px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  header h1 {
+    font-size: 19px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  header h1::before {
+    content: '🍓🫐';
+    font-size: 16px;
+  }
+
+  header .badge {
+    background: var(--line);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .card h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  .description {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--fg);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  label span.hint {
+    color: var(--dim);
+    font-weight: normal;
+    font-size: 11.5px;
+  }
+
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--fg);
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  input[type="text"]:focus,
+  input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(110, 168, 254, 0.2);
+  }
+
+  .toggle-pwd {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11.5px;
+    padding: 2px 6px;
+  }
+  .toggle-pwd:hover { color: var(--fg); }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+  }
+
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+  }
+
+  button.primary:hover:not(:disabled) {
+    background: #8bbcff;
+    transform: translateY(-1px);
+  }
+
+  button.secondary {
+    background: var(--panel2);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: var(--line);
+    border-color: var(--dim);
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .status {
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  .status.success {
+    background: rgba(63, 185, 80, 0.14);
+    border: 1px solid var(--green);
+    color: #56d364;
+  }
+
+  .status.error {
+    background: rgba(248, 81, 73, 0.14);
+    border: 1px solid var(--red);
+    color: #ff8078;
+  }
+
+  .status.info {
+    background: rgba(110, 168, 254, 0.14);
+    border: 1px solid var(--accent);
+    color: #8bbcff;
+  }
+
+  .help-box {
+    background: var(--panel2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .help-box strong {
+    color: var(--fg);
+  }
+
+  .help-box code {
+    background: var(--bg2);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>OpenJam Settings</h1>
+    <span class="badge">GitHub Pages Auto-Publisher</span>
+  </header>
+
+  <div class="card">
+    <h2>GitHub Repository Configuration</h2>
+    <p class="description">
+      Configure your GitHub credentials so OpenJam can automatically upload session recording HTML reports and generate public GitHub Pages preview links.
+    </p>
+
+    <div id="status-message" class="status" hidden></div>
+
+    <form id="config-form">
+      <div class="form-group">
+        <label for="pat">Personal Access Token (PAT) <span class="hint">Scope: <code>repo</code> or Contents read/write</span></label>
+        <div class="input-wrapper">
+          <input type="password" id="pat" placeholder="ghp_xxxxxxxxxxxx" required>
+          <button type="button" class="toggle-pwd" id="toggle-pat">Show</button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 14px;">
+        <label for="owner">Repository Owner <span class="hint">Username or Organization</span></label>
+        <input type="text" id="owner" placeholder="e.g. SaintPepsi" required>
+      </div>
+
+      <div class="form-group" style="margin-top: 14px;">
+        <label for="repo">Repository Name <span class="hint">Target repo for recordings</span></label>
+        <input type="text" id="repo" placeholder="e.g. openjam-reports" required>
+      </div>
+
+      <div class="form-group" style="margin-top: 14px;">
+        <label for="branch">Target Branch <span class="hint">Default: main</span></label>
+        <input type="text" id="branch" placeholder="main" value="main">
+      </div>
+
+      <div class="form-group" style="margin-top: 14px;">
+        <label for="prefix">File Prefix <span class="hint">Default: openjam</span></label>
+        <input type="text" id="prefix" placeholder="openjam" value="openjam">
+      </div>
+
+      <div class="actions" style="margin-top: 20px;">
+        <button type="submit" id="save-btn" class="primary">Save Configuration</button>
+        <button type="button" id="test-btn" class="secondary">Test Connection</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="help-box">
+    <strong>How it works:</strong>
+    <ul style="margin: 6px 0 0 18px; display: flex; flex-direction: column; gap: 4px;">
+      <li>Reports are uploaded via GitHub API to <code>docs/reports/{prefix}-{timestamp}.html</code> in the target repository.</li>
+      <li>Once uploaded, the public URL <code>https://{owner}.github.io/{repo}/reports/{prefix}-{timestamp}.html</code> is automatically copied to your clipboard.</li>
+      <li>Ensure <strong>GitHub Pages</strong> is enabled in your repository's <em>Settings &gt; Pages</em> with <strong>/docs</strong> folder as the source.</li>
+    </ul>
+  </div>
+</div>
+
+<script type="module" src="options.js"></script>
+</body>
+</html>

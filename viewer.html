@@ -24,6 +24,17 @@
   #bar button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:8px 16px;font-weight:650;
     cursor:pointer;box-shadow:0 8px 22px -10px rgba(110,168,254,.7);transition:background .15s ease,transform .15s ease}
   #bar button:hover{background:#8bbcff;transform:translateY(-1px)}
+  #bar button.secondary{background:var(--panel2);color:var(--fg);border:1px solid var(--line);box-shadow:none}
+  #bar button.secondary:hover{background:var(--line);border-color:var(--dim)}
+  #bar button.upload-btn{background:var(--green);color:#0b0d12;box-shadow:0 8px 22px -10px rgba(63,185,80,.7)}
+  #bar button.upload-btn:hover{background:#56d364}
+  #bar button:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+  #toast{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 16px;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600}
+  #toast.success{background:rgba(63,185,80,.14);border-color:var(--green);color:#56d364}
+  #toast.error{background:rgba(248,81,73,.14);border-color:var(--red);color:#ff8078}
+  #toast.info{background:rgba(110,168,254,.14);border-color:var(--accent);color:#8bbcff}
+  #toast a{color:inherit;text-decoration:underline;word-break:break-all}
+  #toast button.close-toast{background:transparent;border:0;color:inherit;cursor:pointer;font-size:14px;padding:2px 6px;box-shadow:none}
   #scroll{flex:1;overflow:auto}
   #app a,#replay a{color:var(--accent);display:inline-block;margin-top:6px}
   .oj-error{margin-top:8px;padding:11px 13px;border:1px solid var(--red);border-radius:9px;background:rgba(248,81,73,.14);color:#ff8078;font-weight:600;max-width:560px;font-size:12.5px;line-height:1.5}
@@ -36,8 +47,11 @@
     <strong>OpenJam</strong>
     <span class="note">self-contained · offline</span>
     <span class="spacer"></span>
+    <button id="open-settings" class="secondary" title="GitHub Settings">⚙ Settings</button>
+    <button id="upload-github" class="upload-btn">☁ Upload to GitHub</button>
     <button id="download">⬇ Download self-contained HTML</button>
   </div>
+  <div id="toast" hidden></div>
   <div id="scroll">
     <div id="replay-section" hidden><h2>Session replay</h2><div id="replay"></div></div>
     <div id="audio-section" hidden><h2>Narration</h2><div id="audio"></div></div>
