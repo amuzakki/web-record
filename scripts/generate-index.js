@@ -128,12 +128,12 @@ function buildReportsTableHtml(files) {
   } else {
     for (const r of files) {
       const tags = [];
-      if (r.hasReplay) tags.push('<span class="tag tag-replay">Replay</span>');
       if (r.hasAudio) tags.push('<span class="tag tag-audio">Audio</span>');
       if (r.errorCount > 0) tags.push(`<span class="tag tag-error">${r.errorCount} error(s)</span>`);
 
       const durStr = r.durationMs ? ` · ${formatDuration(r.durationMs)}` : "";
       const metaSub = `${r.fileSizeKb} KB${durStr}`;
+      const tagsHtml = tags.length > 0 ? `<div class="report-tags">${tags.join(" ")}</div>` : "";
 
       rowsHtml += `
       <tr class="report-row" data-search="${escapeHtml((r.pageTitle + " " + r.pageUrl + " " + r.filename).toLowerCase())}">
@@ -143,7 +143,7 @@ function buildReportsTableHtml(files) {
               ${escapeHtml(r.pageTitle)}
             </a>
             ${r.pageUrl ? `<a href="${escapeHtml(r.pageUrl)}" class="report-url" target="_blank" rel="noopener">${escapeHtml(r.pageUrl)}</a>` : ""}
-            <div class="report-tags">${tags.join(" ")}</div>
+            ${tagsHtml}
           </div>
         </td>
         <td class="report-date-cell">
@@ -167,14 +167,14 @@ function buildReportsTableHtml(files) {
         <span class="reports-count" id="reports-count-label">Showing ${countText}</span>
         <input type="text" id="reports-search-input" placeholder="Search reports..." aria-label="Search reports" autocomplete="off">
       </div>
-      <div class="cmp-scroll reports-table-scroll">
-        <table class="cmp reports-table" id="reports-table">
+      <div class="reports-table-scroll">
+        <table class="reports-table" id="reports-table">
           <thead>
             <tr>
-              <th style="width: 42%;">Report / Source</th>
+              <th style="width: 44%;">Report / Source</th>
               <th style="width: 20%;">Recorded At</th>
               <th style="width: 14%;">Details</th>
-              <th style="width: 24%; text-align: right;">Action</th>
+              <th style="width: 22%; text-align: right;">Action</th>
             </tr>
           </thead>
           <tbody id="reports-table-body">
