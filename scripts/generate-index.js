@@ -154,7 +154,8 @@ function buildReportsTableHtml(files) {
         </td>
         <td class="report-actions-cell">
           <a href="${r.relativePath}" class="btn-sm btn-accent" target="_blank" rel="noopener">Open</a>
-          <a href="${r.relativePath}" download class="btn-sm btn-ghost" title="Download HTML">⬇</a>
+          <a href="${r.relativePath}" download="${escapeHtml(r.filename)}" class="btn-sm btn-secondary" title="Download report file">Download</a>
+          <button type="button" class="btn-sm btn-secondary btn-copy-url" data-url="${r.relativePath}" title="Copy report URL">Copy URL</button>
         </td>
       </tr>`;
     }
@@ -170,10 +171,10 @@ function buildReportsTableHtml(files) {
         <table class="cmp reports-table" id="reports-table">
           <thead>
             <tr>
-              <th style="width: 48%;">Report / Source</th>
-              <th style="width: 22%;">Recorded At</th>
-              <th style="width: 15%;">Details</th>
-              <th style="width: 15%; text-align: right;">Action</th>
+              <th style="width: 42%;">Report / Source</th>
+              <th style="width: 20%;">Recorded At</th>
+              <th style="width: 14%;">Details</th>
+              <th style="width: 24%; text-align: right;">Action</th>
             </tr>
           </thead>
           <tbody id="reports-table-body">
@@ -187,24 +188,59 @@ function buildReportsTableHtml(files) {
         var input = document.getElementById("reports-search-input");
         var tbody = document.getElementById("reports-table-body");
         var count = document.getElementById("reports-count-label");
-        if (!input || !tbody) return;
-        input.addEventListener("input", function(e) {
-          var q = (e.target.value || "").toLowerCase().trim();
-          var rows = tbody.querySelectorAll(".report-row");
-          var visible = 0;
-          rows.forEach(function(row) {
-            var text = row.getAttribute("data-search") || "";
-            if (!q || text.indexOf(q) !== -1) {
-              row.style.display = "";
-              visible++;
-            } else {
-              row.style.display = "none";
+        if (input && tbody) {
+          input.addEventListener("input", function(e) {
+            var q = (e.target.value || "").toLowerCase().trim();
+            var rows = tbody.querySelectorAll(".report-row");
+            var visible = 0;
+            rows.forEach(function(row) {
+              var text = row.getAttribute("data-search") || "";
+              if (!q || text.indexOf(q) !== -1) {
+                row.style.display = "";
+                visible++;
+              } else {
+                row.style.display = "none";
+              }
+            });
+            if (count) {
+              count.textContent = q ? ("Found " + visible + " report" + (visible === 1 ? "" : "s")) : ("Showing " + rows.length + " report" + (rows.length === 1 ? "" : "s"));
             }
           });
-          if (count) {
-            count.textContent = q ? ("Found " + visible + " report" + (visible === 1 ? "" : "s")) : ("Showing " + rows.length + " report" + (rows.length === 1 ? "" : "s"));
+        }
+
+        document.addEventListener("click", function(e) {
+          var btn = e.target.closest(".btn-copy-url");
+          if (!btn) return;
+          var rel = btn.getAttribute("data-url");
+          var fullUrl = new URL(rel, window.location.href).href;
+          function showCopied() {
+            var orig = btn.textContent;
+            btn.textContent = "Copied!";
+            btn.classList.add("btn-copied");
+            setTimeout(function() {
+              btn.textContent = orig;
+              btn.classList.remove("btn-copied");
+            }, 2000);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fullUrl).then(showCopied).catch(function() {
+              fallbackCopy(fullUrl, showCopied);
+            });
+          } else {
+            fallbackCopy(fullUrl, showCopied);
           }
         });
+
+        function fallbackCopy(text, cb) {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand("copy"); cb(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
       })();
     </script>
 `;

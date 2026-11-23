@@ -134,6 +134,21 @@
     // (#0000ee) on the red box was unreadable (#48 screenshot).
     ".notice a{color:inherit; text-decoration:underline; text-underline-offset:2px; display:inline-block; margin-top:6px}",
     ".warn .act{display:block; margin-top:8px; padding:6px 10px; border:1px solid var(--gold); border-radius:6px; background:transparent; color:inherit; font:inherit; cursor:pointer}",
+    /* preferences section */
+    ".prefs{background:var(--bg); border:1px solid var(--line); border-radius:11px; margin-bottom:8px; overflow:hidden}",
+    ".prefs-head{display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; font-size:12px; font-weight:600; color:var(--muted); transition:color .14s ease}",
+    ".prefs-head:hover{color:var(--fg); background:rgba(255,255,255,.02)}",
+    ".prefs-head .ic svg{width:14px; height:14px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round}",
+    ".prefs-lbl{flex:1}",
+    ".prefs-arr{font-size:10px; transition:transform .2s ease}",
+    ":host([prefs-open]) .prefs-arr{transform:rotate(180deg)}",
+    ".prefs-body{max-height:0; opacity:0; overflow:hidden; transition:max-height .24s ease, opacity .2s ease; padding:0 12px}",
+    ":host([prefs-open]) .prefs-body{max-height:220px; opacity:1; padding-bottom:10px; border-top:1px solid var(--line-soft)}",
+    ".pref-row{display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:12px; color:var(--fg); cursor:pointer; user-select:none}",
+    ".pref-row input[type=checkbox]{width:14px; height:14px; accent-color:var(--accent); cursor:pointer; margin:0}",
+    ".prefs-nav{display:flex; justify-content:space-between; margin-top:6px; padding-top:6px; border-top:1px solid var(--line-soft); font-size:11px}",
+    ".prefs-nav a{color:var(--accent); text-decoration:none; cursor:pointer}",
+    ".prefs-nav a:hover{text-decoration:underline}",
     ".hint{color:var(--muted); font-size:11.5px; line-height:1.5; padding:4px 5px 2px}",
     ".hint a{color:var(--accent)}",
     "[hidden]{display:none !important}",
@@ -165,6 +180,23 @@
     "        <select aria-label='Microphone'></select>",
     "      </div>",
     "    </div>",
+    "    <div class='prefs'>",
+    "      <div class='prefs-head' data-act='prefs-head' role='button' tabindex='0' aria-label='Recording preferences'>",
+    "        <span class='ic'><svg viewBox='0 0 24 24'><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z'/></svg></span>",
+    "        <span class='prefs-lbl'>Recording Preferences</span>",
+    "        <span class='prefs-arr'>▾</span>",
+    "      </div>",
+    "      <div class='prefs-body'>",
+    "        <label class='pref-row'><span>Record Mouse Movements</span><input type='checkbox' data-pref='recordMouseMove' checked></label>",
+    "        <label class='pref-row'><span>Show Mouse Trail on Replay</span><input type='checkbox' data-pref='showMouseTail' checked></label>",
+    "        <label class='pref-row'><span>Capture Console Logs</span><input type='checkbox' data-pref='recordConsole' checked></label>",
+    "        <label class='pref-row'><span>Capture Network Activity</span><input type='checkbox' data-pref='recordNetwork' checked></label>",
+    "        <div class='prefs-nav'>",
+    "          <a data-nav='recordings'>📋 All Recordings</a>",
+    "          <a data-nav='options'>⚙ GitHub Settings</a>",
+    "        </div>",
+    "      </div>",
+    "    </div>",
     "    <div class='notice err' hidden></div>",
     "    <div class='notice warn' hidden></div>",
     "    <div class='hint'>Records console, network, errors &amp; a full session replay on the active tab.</div>",
@@ -178,6 +210,7 @@
     constructor() {
       super();
       this.attachShadow({ mode: "open" }).appendChild(TPL.content.cloneNode(true));
+      this.setAttribute("prefs-open", "");
       this._elapsed = 0;
       this._eventCount = 0;
       this._error = "";
@@ -213,6 +246,32 @@
         this._emit("oj-mic-change", { deviceId: this._elSelect.value || null });
       });
 
+      var prefsHead = r.querySelector("[data-act=prefs-head]");
+      if (prefsHead) {
+        prefsHead.addEventListener("click", () => {
+          this.toggleAttribute("prefs-open");
+        });
+        prefsHead.addEventListener("keydown", (e) => {
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            this.toggleAttribute("prefs-open");
+          }
+        });
+      }
+      var prefInputs = r.querySelectorAll("[data-pref]");
+      prefInputs.forEach((inp) => {
+        inp.addEventListener("change", () => {
+          this._emit("oj-pref-change", { key: inp.dataset.pref, value: inp.checked });
+        });
+      });
+      var navLinks = r.querySelectorAll("[data-nav]");
+      navLinks.forEach((link) => {
+        link.addEventListener("click", (e) => {
+          e.preventDefault();
+          this._emit("oj-nav", { target: link.dataset.nav });
+        });
+      });
+
       this._render();
 
       if (this.hasAttribute("demo")) this._startDemo();
@@ -239,6 +298,15 @@
       if ("eventCount" in s && s.eventCount != null) this._eventCount = s.eventCount;
       if (this._elToggle) this._elToggle.disabled = false; // round-trip settled: release the re-entrancy guard
       this._render();
+    }
+
+    setPrefs(p) {
+      if (!p) return;
+      var inputs = this.shadowRoot.querySelectorAll("[data-pref]");
+      inputs.forEach(function (inp) {
+        var key = inp.dataset.pref;
+        if (key in p) inp.checked = p[key] !== false;
+      });
     }
 
     setMics(list, selectedId) {

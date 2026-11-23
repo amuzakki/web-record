@@ -81,7 +81,7 @@ export async function uploadReportToGitHub({
 
   // 2. Prepare PUT payload
   const endpoint = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/docs/reports/${encodeURIComponent(filename)}`;
-  const message = commitMessage || `Add OpenJam recording: docs/reports/${filename} [skip ci]`;
+  const message = commitMessage || `Add OpenJam recording: docs/reports/${filename}`;
 
   const payload = {
     message,

@@ -399,12 +399,48 @@ export function mountReplay(container, report, ReplayerCtor) {
     if (pick) pick.classList.add("oj-audio-active");
   }
 
-  // Scale the recorded viewport to fit the stage width.
-  var stageW = Math.min(player.clientWidth || 1024, 1024);
-  var scale = Math.min(1, stageW / pageW);
-  stage.style.height = Math.round(pageH * scale) + "px";
-  var wrapper = stage.querySelector(".replayer-wrapper");
-  if (wrapper) wrapper.style.transform = "scale(" + scale + ")";
+  // Scale the recorded viewport to fit the stage width adaptively.
+  function fitStage() {
+    var stageW = player.clientWidth || 1024;
+    var wrapper = stage.querySelector(".replayer-wrapper");
+    var iframe = stage.querySelector("iframe");
+
+    var curW = pageW;
+    var curH = pageH;
+    if (wrapper && wrapper.offsetWidth) curW = wrapper.offsetWidth;
+    if (wrapper && wrapper.offsetHeight) curH = wrapper.offsetHeight;
+    else if (iframe && iframe.offsetHeight) curH = iframe.offsetHeight;
+
+    var scale = Math.min(1, stageW / (curW || 1024));
+    if (wrapper) {
+      wrapper.style.transform = "scale(" + scale + ")";
+      wrapper.style.transformOrigin = "0 0";
+    }
+    var targetH = Math.round((curH || 576) * scale);
+    if (targetH > 0) {
+      stage.style.height = targetH + "px";
+    }
+  }
+
+  fitStage();
+  window.addEventListener("resize", fitStage);
+
+  if (typeof ResizeObserver !== "undefined") {
+    var ro = new ResizeObserver(function () {
+      fitStage();
+    });
+    ro.observe(player);
+    var wrapperEl = stage.querySelector(".replayer-wrapper");
+    if (wrapperEl) ro.observe(wrapperEl);
+  }
+
+  try {
+    replayer.on("resize", function (dim) {
+      if (dim && dim.width) pageW = dim.width;
+      if (dim && dim.height) pageH = dim.height;
+      fitStage();
+    });
+  } catch (e) {}
 
   function paint() {
     // paint() is also called synchronously by seek handlers — cancel any pending

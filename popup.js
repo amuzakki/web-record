@@ -107,7 +107,32 @@ async function loadAudio() {
   else if (s.enabled) oj.showWarning("Microphone access isn't granted. Turn narration on to grant it.");
 }
 
+/* ---------------- preferences ---------------- */
+const PREFS_KEY = "openjam_recording_prefs";
+async function loadPrefs() {
+  const data = await chrome.storage.local.get(PREFS_KEY);
+  const prefs = data[PREFS_KEY] || {};
+  oj.setPrefs(prefs);
+}
+
+oj.addEventListener("oj-pref-change", async (e) => {
+  const { key, value } = e.detail;
+  const data = await chrome.storage.local.get(PREFS_KEY);
+  const prefs = data[PREFS_KEY] || {};
+  prefs[key] = value;
+  await chrome.storage.local.set({ [PREFS_KEY]: prefs });
+});
+
+oj.addEventListener("oj-nav", (e) => {
+  if (e.detail.target === "recordings") {
+    chrome.tabs.create({ url: chrome.runtime.getURL("recordings.html") });
+  } else if (e.detail.target === "options") {
+    chrome.runtime.openOptionsPage();
+  }
+});
+
 /* ---------------- boot + poll ---------------- */
 refresh();
 loadAudio();
+loadPrefs();
 setInterval(refresh, 1000);
