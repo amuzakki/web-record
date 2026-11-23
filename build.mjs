@@ -42,7 +42,7 @@ const tokensCss = "\n  " + tokenLines.join("\n  ") + "\n  ";
 const tokensJsArray = "\n    " + tokenLines.map((l) => JSON.stringify("  " + l) + ",").join("\n    ") + "\n    ";
 
 // Fan the palette out to every consumer between its token markers.
-for (const file of ["renderer.js", "viewer.html", "openjam-popup.js", "options.html"]) {
+for (const file of ["renderer.js", "viewer.html", "openjam-popup.js", "options.html", "recordings.html"]) {
   if (!existsSync(file)) continue;
   // openjam-popup.js builds its <style> as a JS string-array, so it takes the
   // array-element rendering; the others are raw CSS.
@@ -133,7 +133,9 @@ await build({
 if (!rrwebSrcsetPatched) throw new Error("rrweb srcset rebuild patch never ran (did @rrweb/replay's entry move?)");
 
 const engine = readFileSync("dist/rrweb-replay.js", "utf8");
-const engineCss = readFileSync("node_modules/@rrweb/replay/dist/style.min.css", "utf8");
+const engineCss = readFileSync("node_modules/@rrweb/replay/dist/style.min.css", "utf8")
+  .replace(/\/\*# sourceMappingURL=.*?\*\//g, "")
+  .trim();
 
 // Both get inlined into an HTML <script>/<style>. The export neutralises
 // </script>, but <!-- or <script would shift the HTML parser into a state that
@@ -158,4 +160,10 @@ if (existsSync("options.html")) {
 }
 if (existsSync("options.js")) {
   copyFileSync("options.js", "dist/options.js");
+}
+if (existsSync("recordings.html")) {
+  copyFileSync("recordings.html", "dist/recordings.html");
+}
+if (existsSync("recordings.js")) {
+  copyFileSync("recordings.js", "dist/recordings.js");
 }

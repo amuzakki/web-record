@@ -341,6 +341,8 @@ async function finalizeRecording({ note, audio } = {}) {
     pushEvent({ t: Date.now(), kind: KIND.LOG, level: "warning", title: note, detail: { message: note } });
   }
 
+  const prefs = (await chrome.storage.local.get("openjam_recording_prefs"))?.openjam_recording_prefs || {};
+
   const report = {
     meta: {
       version: chrome.runtime.getManifest().version,
@@ -350,6 +352,8 @@ async function finalizeRecording({ note, audio } = {}) {
       pageUrl: session.device && session.device.url,
       pageTitle: session.device && session.device.title,
       eventCount: session.events.length,
+      showMouseTail: prefs.showMouseTail !== false,
+      recordMouseMove: prefs.recordMouseMove !== false,
     },
     device: session.device,
     events: session.events.slice().sort((a, b) => a.t - b.t),
@@ -365,6 +369,21 @@ async function finalizeRecording({ note, audio } = {}) {
   const key = "report-" + session.startWall;
   try {
     await saveReport(key, report);
+    try {
+      const { openjam_recordings_index = [] } = await chrome.storage.local.get("openjam_recordings_index");
+      const newEntry = {
+        key,
+        timestamp: report.meta.capturedAt,
+        pageUrl: report.meta.pageUrl || "",
+        pageTitle: report.meta.pageTitle || "",
+        durationMs: report.meta.durationMs || 0,
+        eventCount: report.meta.eventCount || 0,
+        hasReplay: !!(report.rrwebEvents && (Array.isArray(report.rrwebEvents) ? report.rrwebEvents.length > 0 : report.rrwebEvents.length > 2)),
+        hasAudio: !!(report.audio && report.audio.dataUrl),
+      };
+      const updatedIndex = [newEntry, ...openjam_recordings_index.filter((e) => e.key !== key)].slice(0, 100);
+      await chrome.storage.local.set({ openjam_recordings_index: updatedIndex });
+    } catch {}
   } finally {
     session.stopping = false;
     session.lane = idleLane;

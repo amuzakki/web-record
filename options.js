@@ -2,6 +2,7 @@
 // Persists settings to chrome.storage.local under 'openjam_github_config'.
 
 const STORAGE_KEY = "openjam_github_config";
+const PREFS_KEY = "openjam_recording_prefs";
 
 const patInput = document.getElementById("pat");
 const ownerInput = document.getElementById("owner");
@@ -13,6 +14,21 @@ const form = document.getElementById("config-form");
 const saveBtn = document.getElementById("save-btn");
 const testBtn = document.getElementById("test-btn");
 const statusMsg = document.getElementById("status-message");
+
+const prefsForm = document.getElementById("prefs-form");
+const prefMouseMove = document.getElementById("pref-mouse-move");
+const prefMouseTail = document.getElementById("pref-mouse-tail");
+const prefConsole = document.getElementById("pref-console");
+const prefNetwork = document.getElementById("pref-network");
+const prefsStatusMsg = document.getElementById("prefs-status-message");
+
+function showPrefsStatus(text, type = "info") {
+  if (!prefsStatusMsg) return;
+  prefsStatusMsg.textContent = text;
+  prefsStatusMsg.className = `status ${type}`;
+  prefsStatusMsg.hidden = false;
+  setTimeout(() => { prefsStatusMsg.hidden = true; }, 4000);
+}
 
 function showStatus(text, type = "info") {
   statusMsg.textContent = text;
@@ -29,16 +45,40 @@ function clearStatus() {
 // Load saved configuration
 async function loadConfig() {
   try {
-    const res = await chrome.storage.local.get(STORAGE_KEY);
+    const res = await chrome.storage.local.get([STORAGE_KEY, PREFS_KEY]);
     const config = res[STORAGE_KEY] || {};
     if (config.pat) patInput.value = config.pat;
     if (config.owner) ownerInput.value = config.owner;
     if (config.repo) repoInput.value = config.repo;
     if (config.branch) branchInput.value = config.branch;
     if (config.prefix) prefixInput.value = config.prefix;
+
+    const prefs = res[PREFS_KEY] || {};
+    if (prefMouseMove) prefMouseMove.checked = prefs.recordMouseMove !== false;
+    if (prefMouseTail) prefMouseTail.checked = prefs.showMouseTail !== false;
+    if (prefConsole) prefConsole.checked = prefs.recordConsole !== false;
+    if (prefNetwork) prefNetwork.checked = prefs.recordNetwork !== false;
   } catch (err) {
     showStatus("Failed to load saved settings: " + err.message, "error");
   }
+}
+
+if (prefsForm) {
+  prefsForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const prefs = {
+      recordMouseMove: prefMouseMove.checked,
+      showMouseTail: prefMouseTail.checked,
+      recordConsole: prefConsole.checked,
+      recordNetwork: prefNetwork.checked,
+    };
+    try {
+      await chrome.storage.local.set({ [PREFS_KEY]: prefs });
+      showPrefsStatus("Preferences saved successfully!", "success");
+    } catch (err) {
+      showPrefsStatus("Failed to save preferences: " + err.message, "error");
+    }
+  });
 }
 
 // Toggle PAT visibility

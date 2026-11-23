@@ -71,9 +71,11 @@ export function buildReportHTML(report, replayAssets) {
 ${hasReplay ? `<style>${REPLAY_CSS}</style>\n<style>${replayAssets.ENGINE_CSS}</style>` : ""}
 </head>
 <body>
+<div class="report-split-layout">
 ${hasReplay ? `<div id="replay-section"><h2>Session replay</h2><div id="replay"></div></div>` : ""}
 ${hasStandaloneAudio ? `<div id="audio-section"><h2>Narration</h2><div id="audio"></div></div>` : ""}
 <div id="app"></div>
+</div>
 <script id="openjam-ai" type="application/json">${manifestJson}</script>
 <script id="openjam-data" type="application/json">${dataJson}</script>
 <script>
@@ -101,6 +103,17 @@ ${mountAudio.toString()}
 try { mountAudio(document.getElementById("audio"), JSON.parse(document.getElementById("openjam-data").textContent)); }
 catch (err) { var s = document.getElementById("audio-section"); if (s) s.hidden = true; console.error("audio mount failed", err); }
 </script>` : ""}
+<script>
+(function() {
+  function haltPendingEgress() { try { window.stop(); } catch (e) {} }
+  if (document.readyState === "complete") {
+    setTimeout(haltPendingEgress, 1200);
+  } else {
+    window.addEventListener("load", function() { setTimeout(haltPendingEgress, 800); });
+    setTimeout(haltPendingEgress, 2500);
+  }
+})();
+</script>
 </body>
 </html>`;
 }

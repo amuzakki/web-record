@@ -94,6 +94,13 @@ async function load() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
+  const recordingsBtn = document.getElementById("open-recordings");
+  if (recordingsBtn) {
+    recordingsBtn.addEventListener("click", () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL("recordings.html") });
+    });
+  }
+
   const settingsBtn = document.getElementById("open-settings");
   if (settingsBtn) {
     settingsBtn.addEventListener("click", () => {
@@ -171,6 +178,17 @@ async function load() {
 
         uploadBtn.textContent = "✓ Uploaded & Copied!";
         showToast("Uploaded successfully! Public URL copied to clipboard:", "success", 15000, result.pagesUrl);
+
+        try {
+          const { openjam_recordings_index = [] } = await chrome.storage.local.get("openjam_recordings_index");
+          const idx = openjam_recordings_index.findIndex((e) => e.key === key);
+          if (idx !== -1) {
+            openjam_recordings_index[idx].githubPagesUrl = result.pagesUrl;
+            await chrome.storage.local.set({ openjam_recordings_index });
+          }
+        } catch (idxErr) {
+          console.warn("Could not update recording index with Pages URL:", idxErr);
+        }
 
         setTimeout(() => {
           uploadBtn.disabled = false;

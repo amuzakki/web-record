@@ -98,6 +98,49 @@ details.device[open] summary::before{transform:rotate(90deg)}
   letter-spacing:.11em;font-family:var(--mono);font-weight:600;display:flex;align-items:center;gap:9px}
 #replay-section h2::before,#audio-section h2::before{content:'';width:7px;height:7px;border-radius:50%;
   background:var(--accent);box-shadow:0 0 0 4px rgba(110,168,254,.16)}
+
+/* split layout 50-50% for desktop */
+@media (min-width: 1024px) {
+  html, body {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .report-split-layout, #scroll {
+    display: flex !important;
+    flex-direction: row !important;
+    height: 100vh;
+    overflow: hidden !important;
+  }
+  body > #bar + .report-split-layout,
+  body > #bar + #scroll,
+  body > #toast + .report-split-layout,
+  body > #toast + #scroll {
+    height: calc(100vh - 54px);
+  }
+  #replay-section, #audio-section {
+    flex: 0 0 50% !important;
+    width: 50% !important;
+    max-width: 50% !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    position: sticky !important;
+    top: 0 !important;
+    border-right: 1px solid var(--line) !important;
+    border-bottom: none !important;
+    box-sizing: border-box !important;
+    padding: 20px !important;
+  }
+  #replay-section[hidden], #audio-section[hidden] {
+    display: none !important;
+  }
+  #app {
+    flex: 1 1 50% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+  }
+}
 `;
 
 export const REPLAY_CSS = `
@@ -166,7 +209,13 @@ export function mountReplay(container, report, ReplayerCtor) {
   player.appendChild(controls);
   container.appendChild(player);
 
-  var replayer = new ReplayerCtor(events, { root: stage, speed: 1 });
+  var mouseTailActive = !(report.meta && report.meta.showMouseTail === false);
+  var replayer = new ReplayerCtor(events, {
+    root: stage,
+    speed: 1,
+    loadTimeout: 0,
+    mouseTail: mouseTailActive ? undefined : false,
+  });
   var total = replayer.getMetaData().totalTime;
   var totalEl = document.getElementById("oj-diag-total");
   if (totalEl) totalEl.textContent = Math.round(total) + " ms";
@@ -421,6 +470,21 @@ export function mountReplay(container, report, ReplayerCtor) {
     });
     controls.appendChild(btn);
   });
+  var tailToggle = el("button", mouseTailActive ? "oj-on" : null, "🖱 Trail");
+  tailToggle.title = "Toggle red mouse tracking line";
+  tailToggle.addEventListener("click", function () {
+    mouseTailActive = !mouseTailActive;
+    if (mouseTailActive) tailToggle.classList.add("oj-on");
+    else tailToggle.classList.remove("oj-on");
+    if (replayer.config) {
+      replayer.config.mouseTail = mouseTailActive ? true : false;
+      if (!mouseTailActive && replayer.mouseTail) {
+        var ctx = replayer.mouseTail.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, replayer.mouseTail.width, replayer.mouseTail.height);
+      }
+    }
+  });
+  controls.appendChild(tailToggle);
   replayer.on("finish", function () {
     if (duration > total) {
       // narration outlasts the replay: hold the last frame and enter the tail
