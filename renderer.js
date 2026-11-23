@@ -439,6 +439,9 @@ export function mountReplay(container, report, ReplayerCtor) {
       if (dim && dim.height) pageH = dim.height;
       fitStage();
     });
+    replayer.on("fullsnapshot-rebuilded", function () {
+      fitStage();
+    });
   } catch (e) {}
 
   function paint() {

@@ -110,6 +110,93 @@ const RRWEB_SRCSET_FIX = 'tagName === "img" && (name === "srcset" || name === "s
 const RRWEB_REBUILD_TARGET_BUG = 'if (sandboxedRebuildDocuments.has(options.doc) && isSupportedSandboxedIframe(win.frameElement))';
 const RRWEB_REBUILD_TARGET_FIX = 'if (isSupportedSandboxedIframe(win.frameElement)) { sandboxedRebuildDocuments.add(options.doc); return; }\n  if (sandboxedRebuildDocuments.has(options.doc))';
 
+// Safe full snapshot rebuild into sandboxed iframe:
+// Always allow rebuild in our sandboxed iframe without script execution risk.
+const RRWEB_UNSAFE_ALLOW_BUG = 'UNSAFE_allowUnprotectedRebuild: this.UNSAFE_replayCanvas';
+const RRWEB_UNSAFE_ALLOW_FIX = 'UNSAFE_allowUnprotectedRebuild: true';
+
+// Clear document before full snapshot rebuild to avoid HierarchyRequestError:
+// In sandboxed iframes without allow-scripts, doc.open() is a no-op and does not clear
+// existing children (doctype & documentElement). We must explicitly remove them so appending
+// the new snapshot root does not throw "Only one element on document allowed".
+const RRWEB_REBUILD_SNAPSHOT_CLEAR_BUG = `  rebuildFullSnapshot(event, isSync = false) {
+    if (!this.iframe.contentDocument) {
+      return this.warn("Looks like your replayer has been destroyed.");
+    }`;
+const RRWEB_REBUILD_SNAPSHOT_CLEAR_FIX = `  rebuildFullSnapshot(event, isSync = false) {
+    if (!this.iframe.contentDocument) {
+      return this.warn("Looks like your replayer has been destroyed.");
+    }
+    try {
+      const doc = this.iframe.contentDocument;
+      while (doc && doc.firstChild) {
+        doc.removeChild(doc.firstChild);
+      }
+    } catch (e) {}`;
+
+const RRWEB_REBUILD_DOC_CLEAR_BUG = `  if (n2.type === NodeType$3.Document) {
+    doc.close();
+    doc.open();`;
+const RRWEB_REBUILD_DOC_CLEAR_FIX = `  if (n2.type === NodeType$3.Document) {
+    try {
+      while (doc && doc.firstChild) {
+        doc.removeChild(doc.firstChild);
+      }
+    } catch (e) {}
+    try { doc.close(); } catch (e) {}
+    try { doc.open(); } catch (e) {}`;
+
+const RRWEB_REBUILD_APPEND_CHILD_BUG = `      } else if (n2.type === NodeType$3.Document && childN.type == NodeType$3.Element) {
+        const htmlElement = childNode;
+        let body = null;
+        htmlElement.childNodes.forEach((child) => {
+          if (child.nodeName === "BODY") body = child;
+        });
+        if (body) {
+          htmlElement.removeChild(body);
+          node2.appendChild(childNode);
+          htmlElement.appendChild(body);
+        } else {
+          node2.appendChild(childNode);
+        }
+      } else {
+        node2.appendChild(childNode);
+      }`;
+const RRWEB_REBUILD_APPEND_CHILD_FIX = `      } else if (n2.type === NodeType$3.Document && childN.type == NodeType$3.Element) {
+        const htmlElement = childNode;
+        let body = null;
+        htmlElement.childNodes.forEach((child) => {
+          if (child.nodeName === "BODY") body = child;
+        });
+        if (body) {
+          htmlElement.removeChild(body);
+          if (node2.documentElement) node2.documentElement.replaceWith(childNode);
+          else node2.appendChild(childNode);
+          htmlElement.appendChild(body);
+        } else {
+          if (node2.documentElement) node2.documentElement.replaceWith(childNode);
+          else node2.appendChild(childNode);
+        }
+      } else if (n2.type === NodeType$3.Document && childN.type == NodeType$3.DocumentType) {
+        if (node2.doctype) node2.doctype.replaceWith(childNode);
+        else node2.appendChild(childNode);
+      } else {
+        node2.appendChild(childNode);
+      }`;
+
+// Reset scroll on full snapshot rebuild
+const RRWEB_SCROLLTO_BUG = "(_a2 = this.iframe.contentWindow) == null ? void 0 : _a2.scrollTo(event.data.initialOffset);";
+const RRWEB_SCROLLTO_FIX = `try {
+              const offset = event.data.initialOffset || { left: 0, top: 0 };
+              if (this.iframe.contentWindow) {
+                this.iframe.contentWindow.scrollTo(offset.left || 0, offset.top || 0);
+              }
+              if (this.iframe.contentDocument && this.iframe.contentDocument.documentElement) {
+                this.iframe.contentDocument.documentElement.scrollTop = offset.top || 0;
+                this.iframe.contentDocument.documentElement.scrollLeft = offset.left || 0;
+              }
+            } catch (e) {}`;
+
 // Upstream bug: waitForStylesheetLoad pauses the state machine on pending stylesheets,
 // but the pause listener overwrites beforeLoadState to "paused". The resume timer then
 // checks beforeLoadState.matches("playing"), which is always false, freezing the replay.
@@ -152,7 +239,17 @@ const RRWEB_TIMER_ACTION_FIX = `      if (this.timeOffset >= action.delay) {
         }
       }`;
 
-let rrwebPatchesApplied = { srcset: false, rebuildTarget: false, stylesheetPause: false, timerAction: false };
+let rrwebPatchesApplied = {
+  srcset: false,
+  rebuildTarget: false,
+  unsafeAllow: false,
+  rebuildSnapshotClear: false,
+  rebuildDocClear: false,
+  rebuildAppendChild: false,
+  scrollTo: false,
+  stylesheetPause: false,
+  timerAction: false,
+};
 const patchRrwebRebuild = {
   name: "patch-rrweb-rebuild",
   setup(b) {
@@ -162,6 +259,11 @@ const patchRrwebRebuild = {
       for (const [bug, fix, key] of [
         [RRWEB_SRCSET_BUG, RRWEB_SRCSET_FIX, "srcset"],
         [RRWEB_REBUILD_TARGET_BUG, RRWEB_REBUILD_TARGET_FIX, "rebuildTarget"],
+        [RRWEB_UNSAFE_ALLOW_BUG, RRWEB_UNSAFE_ALLOW_FIX, "unsafeAllow"],
+        [RRWEB_REBUILD_SNAPSHOT_CLEAR_BUG, RRWEB_REBUILD_SNAPSHOT_CLEAR_FIX, "rebuildSnapshotClear"],
+        [RRWEB_REBUILD_DOC_CLEAR_BUG, RRWEB_REBUILD_DOC_CLEAR_FIX, "rebuildDocClear"],
+        [RRWEB_REBUILD_APPEND_CHILD_BUG, RRWEB_REBUILD_APPEND_CHILD_FIX, "rebuildAppendChild"],
+        [RRWEB_SCROLLTO_BUG, RRWEB_SCROLLTO_FIX, "scrollTo"],
         [RRWEB_STYLESHEET_PAUSE_BUG, RRWEB_STYLESHEET_PAUSE_FIX, "stylesheetPause"],
         [RRWEB_TIMER_ACTION_BUG, RRWEB_TIMER_ACTION_FIX, "timerAction"],
       ]) {
