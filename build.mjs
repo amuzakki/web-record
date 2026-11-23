@@ -102,17 +102,76 @@ for (const name of ["rrweb-recorder", "page-probe", "rrweb-relay"]) {
 //     in charge. Guarded by the currentSrc assertion in the #43 e2e.
 const RRWEB_SRCSET_BUG = 'tagName === "img" && n2.attributes.srcset && n2.attributes.rr_dataURL';
 const RRWEB_SRCSET_FIX = 'tagName === "img" && (name === "srcset" || name === "src") && n2.attributes.srcset && n2.attributes.rr_dataURL';
-// Fail loud on an rrweb bump: exactly one match in the file, and the hook must run
-// at all (an entry move, e.g. to replay.mjs, would otherwise skip onLoad silently).
-let rrwebSrcsetPatched = false;
-const patchRrwebSrcsetRebuild = {
-  name: "patch-rrweb-srcset-rebuild",
+
+// Upstream bug: assertRebuildTargetAllowed rejects rebuilding iframes on subsequent full
+// snapshots (e.g. on navigation) because document.open() replaces the Document instance,
+// losing the weak reference in sandboxedRebuildDocuments. Fix: trust any supported sandboxed iframe
+// and re-add its document.
+const RRWEB_REBUILD_TARGET_BUG = 'if (sandboxedRebuildDocuments.has(options.doc) && isSupportedSandboxedIframe(win.frameElement))';
+const RRWEB_REBUILD_TARGET_FIX = 'if (isSupportedSandboxedIframe(win.frameElement)) { sandboxedRebuildDocuments.add(options.doc); return; }\n  if (sandboxedRebuildDocuments.has(options.doc))';
+
+// Upstream bug: waitForStylesheetLoad pauses the state machine on pending stylesheets,
+// but the pause listener overwrites beforeLoadState to "paused". The resume timer then
+// checks beforeLoadState.matches("playing"), which is always false, freezing the replay.
+const RRWEB_STYLESHEET_PAUSE_BUG = `      if (unloadSheets.size > 0) {
+        this.service.send({ type: "PAUSE" });
+        this.emitter.emit(ReplayerEvents.LoadStylesheetStart);
+        timer = setTimeout(() => {
+          if (beforeLoadState.matches("playing")) {
+            this.play(this.getCurrentTime());
+          }
+          timer = -1;
+          unsubscribe();
+        }, this.config.loadTimeout);
+      }`;
+const RRWEB_STYLESHEET_PAUSE_FIX = `      if (unloadSheets.size > 0) {
+        const wasPlaying = beforeLoadState.matches("playing");
+        this.service.send({ type: "PAUSE" });
+        this.emitter.emit(ReplayerEvents.LoadStylesheetStart);
+        timer = setTimeout(() => {
+          if (wasPlaying) {
+            this.play(this.getCurrentTime());
+          }
+          timer = -1;
+          unsubscribe();
+        }, this.config.loadTimeout || 500);
+      }`;
+
+// Resilience: wrap timer action dispatch in try/catch so an unexpected DOM exception
+// in an individual event never permanently crashes the requestAnimationFrame timer loop.
+const RRWEB_TIMER_ACTION_BUG = `      if (this.timeOffset >= action.delay) {
+        this.actions.shift();
+        action.doAction();
+      }`;
+const RRWEB_TIMER_ACTION_FIX = `      if (this.timeOffset >= action.delay) {
+        this.actions.shift();
+        try {
+          action.doAction();
+        } catch (e) {
+          console.warn("[rrweb] action error on event:", e);
+        }
+      }`;
+
+let rrwebPatchesApplied = { srcset: false, rebuildTarget: false, stylesheetPause: false, timerAction: false };
+const patchRrwebRebuild = {
+  name: "patch-rrweb-rebuild",
   setup(b) {
     b.onLoad({ filter: /@rrweb[/\\]replay[/\\]dist[/\\]replay\.js$/ }, (args) => {
-      const parts = readFileSync(args.path, "utf8").split(RRWEB_SRCSET_BUG);
-      if (parts.length !== 2) throw new Error(`rrweb srcset rebuild patch: expected 1 match, found ${parts.length - 1} in ${args.path}`);
-      rrwebSrcsetPatched = true;
-      return { contents: parts.join(RRWEB_SRCSET_FIX), loader: "js" };
+      let contents = readFileSync(args.path, "utf8");
+
+      for (const [bug, fix, key] of [
+        [RRWEB_SRCSET_BUG, RRWEB_SRCSET_FIX, "srcset"],
+        [RRWEB_REBUILD_TARGET_BUG, RRWEB_REBUILD_TARGET_FIX, "rebuildTarget"],
+        [RRWEB_STYLESHEET_PAUSE_BUG, RRWEB_STYLESHEET_PAUSE_FIX, "stylesheetPause"],
+        [RRWEB_TIMER_ACTION_BUG, RRWEB_TIMER_ACTION_FIX, "timerAction"],
+      ]) {
+        const parts = contents.split(bug);
+        if (parts.length !== 2) throw new Error(`rrweb ${key} patch: expected 1 match, found ${parts.length - 1} in ${args.path}`);
+        contents = parts.join(fix);
+        rrwebPatchesApplied[key] = true;
+      }
+
+      return { contents, loader: "js" };
     });
   },
 };
@@ -128,9 +187,11 @@ await build({
   minify: true,
   outfile: "dist/rrweb-replay.js",
   logLevel: "info",
-  plugins: [patchRrwebSrcsetRebuild],
+  plugins: [patchRrwebRebuild],
 });
-if (!rrwebSrcsetPatched) throw new Error("rrweb srcset rebuild patch never ran (did @rrweb/replay's entry move?)");
+if (!Object.values(rrwebPatchesApplied).every(Boolean)) {
+  throw new Error("one or more rrweb patches never ran: " + JSON.stringify(rrwebPatchesApplied));
+}
 
 const engine = readFileSync("dist/rrweb-replay.js", "utf8");
 const engineCss = readFileSync("node_modules/@rrweb/replay/dist/style.min.css", "utf8")

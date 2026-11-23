@@ -108,6 +108,7 @@ function formatDate(isoString) {
     return d.toLocaleString("en-US", {
       dateStyle: "medium",
       timeStyle: "short",
+      timeZone: "UTC",
     });
   } catch {
     return isoString;

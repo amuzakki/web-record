@@ -213,7 +213,6 @@ export function mountReplay(container, report, ReplayerCtor) {
   var replayer = new ReplayerCtor(events, {
     root: stage,
     speed: 1,
-    loadTimeout: 0,
     mouseTail: mouseTailActive ? undefined : false,
   });
   var total = replayer.getMetaData().totalTime;
